@@ -1,9 +1,12 @@
 {
+  "id": "/",
   "name": "SnapField - Pocket Puzzle",
   "short_name": "SnapField",
   "description": "A satisfying block-placing puzzle game. Snap pieces to the grid, clear rows, and chain combos!",
   "start_url": "/",
   "scope": "/",
+  "lang": "en",
+  "dir": "ltr",
   "display": "fullscreen",
   "orientation": "portrait",
   "background_color": "#0f172a",
@@ -22,6 +25,15 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "SnapField - Pocket Puzzle gameplay"
     }
   ]
 }
