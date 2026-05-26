@@ -21,6 +21,11 @@
     --accent-glow: rgba(59, 130, 246, 0.3);
     --success: #10b981;
     --warning: #f59e0b;
+    /* Safe area insets for iPhone notch/home indicator */
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
   }
   
   * {
@@ -69,6 +74,10 @@
     height: 100dvh;
     height: -webkit-fill-available;
     padding: 16px;
+    padding-top: max(16px, env(safe-area-inset-top, 16px));
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+    padding-left: max(16px, env(safe-area-inset-left, 16px));
+    padding-right: max(16px, env(safe-area-inset-right, 16px));
     gap: 16px;
     max-width: 600px;
     margin: 0 auto;
@@ -1302,13 +1311,15 @@
     return { x: (clientX - r.left) * sx, y: (clientY - r.top) * sy };
   }
   
-  function pointerToGrid(clientX, clientY) {
+  function pointerToGrid(clientX, clientY, opts) {
     const r = getRect();
     const sx = canvas.width / r.width;
     const sy = canvas.height / r.height;
 
+    // fingerOffset only applies when dragging a piece (not for powerup tap/clicks)
+    const isDrag = opts && opts.isDrag;
     const isTouchLike = ('ontouchstart' in window || navigator.maxTouchPoints > 0);
-    const fingerOffset = isTouchLike ? 132 : 0;
+    const fingerOffset = (isDrag && isTouchLike) ? 132 : 0;
 
     const x = (clientX - r.left) * sx;
     const y = ((clientY - fingerOffset) - r.top) * sy;
@@ -1775,7 +1786,7 @@
         try { slot.setPointerCapture(e.pointerId); } catch(err) {}
         const pt = clientToCanvas(e.clientX, e.clientY);
         dragging = { piece: p, idx, x: pt.x, y: pt.y };
-        hoverCell = pointerToGrid(e.clientX, e.clientY, { isTouch: e.pointerType === 'touch' });
+        hoverCell = pointerToGrid(e.clientX, e.clientY, { isTouch: e.pointerType === 'touch', isDrag: true });
         vibrate(80);
         if (e.cancelable) e.preventDefault();
       });
@@ -1787,7 +1798,7 @@
         if (!t) return;
         const pt = clientToCanvas(t.clientX, t.clientY);
         dragging = { piece: p, idx, x: pt.x, y: pt.y };
-        hoverCell = pointerToGrid(t.clientX, t.clientY, { isTouch: true });
+        hoverCell = pointerToGrid(t.clientX, t.clientY, { isTouch: true, isDrag: true });
         vibrate(80);
         if (e.cancelable) e.preventDefault();
       }, { passive: false });
@@ -1801,7 +1812,7 @@
     const pt = clientToCanvas(e.clientX, e.clientY);
     dragging.x = pt.x;
     dragging.y = pt.y;
-    hoverCell = pointerToGrid(e.clientX, e.clientY, { isTouch: e.pointerType === 'touch' });
+    hoverCell = pointerToGrid(e.clientX, e.clientY, { isTouch: e.pointerType === 'touch', isDrag: true });
     if (e.cancelable) e.preventDefault();
   }
   
@@ -2025,7 +2036,7 @@
     const pt = clientToCanvas(t.clientX, t.clientY);
     dragging.x = pt.x;
     dragging.y = pt.y;
-    hoverCell = pointerToGrid(t.clientX, t.clientY, { isTouch: true });
+    hoverCell = pointerToGrid(t.clientX, t.clientY, { isTouch: true, isDrag: true });
     if (e.cancelable) e.preventDefault();
   }
   
@@ -2280,9 +2291,14 @@
     const padX = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight);
     const gap = parseFloat(styles.gap) || 0;
 
+    // Account for iPhone notch/home-indicator safe areas
+    const safeTop = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0') || 0;
+    const safeBottom = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sab') || '0') || 0;
+    const safeSides = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sal') || '0') || 0;
+
     const fixedHeight = header.offsetHeight + powerupsBar.offsetHeight + statusBar.offsetHeight + piecesTray.offsetHeight;
-    const availableHeight = window.innerHeight - padY - (gap * 4) - fixedHeight;
-    const availableWidth = Math.min(container.clientWidth, window.innerWidth) - padX;
+    const availableHeight = window.innerHeight - padY - (gap * 4) - fixedHeight - safeTop - safeBottom;
+    const availableWidth = Math.min(container.clientWidth, window.innerWidth) - padX - (safeSides * 2);
 
     const nextSize = Math.floor(Math.min(520, availableWidth, availableHeight));
     const boardSize = Math.max(220, nextSize || 220);
