@@ -7,6 +7,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <title>SnapField - Pocket Puzzle</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&display=swap');
   
@@ -1014,17 +1018,31 @@
       showToast('🔄 Pieces Shuffled!', 'Fresh pieces ready');
       sounds.powerup();
       vibrate(150);
+      if (!anyMoveAvailable() && powerups.shuffle === 0) {
+        sounds.gameOver();
+        vibrate(300);
+        setGameOver(true);
+      }
     }
   });
   
   // Floating score display
-  function showFloatingScore(points, x, y) {
+  function showFloatingScore(points, canvasX, canvasY) {
+    // canvasX/canvasY are canvas-internal (680-space) coords.
+    // Convert to CSS px relative to .board-container (the absolute-position parent).
+    const container = document.querySelector('.board-container');
+    const cRect = canvas.getBoundingClientRect();
+    const pRect = container.getBoundingClientRect();
+    const scaleX = cRect.width / canvas.width;
+    const scaleY = cRect.height / canvas.height;
+    const left = (cRect.left - pRect.left) + canvasX * scaleX;
+    const top = (cRect.top - pRect.top) + canvasY * scaleY;
     const floatingScore = document.createElement('div');
     floatingScore.className = 'floating-score';
     floatingScore.textContent = `+${points}`;
-    floatingScore.style.left = x + 'px';
-    floatingScore.style.top = y + 'px';
-    document.querySelector('.board-container').appendChild(floatingScore);
+    floatingScore.style.left = left + 'px';
+    floatingScore.style.top = top + 'px';
+    container.appendChild(floatingScore);
     setTimeout(() => floatingScore.remove(), 1500);
   }
   
@@ -1841,9 +1859,8 @@
       score += placementPoints;
       
       // Show floating score for placement
-      const rect = canvas.getBoundingClientRect();
       const { px, py } = cellToPx(hoverCell.x, hoverCell.y);
-      showFloatingScore(placementPoints, rect.left + px, rect.top + py - 20);
+      showFloatingScore(placementPoints, px, py - 20);
       
       // Score pop animation
       scoreEl.classList.add('score-pop');
@@ -1898,7 +1915,7 @@
         );
         
         // Show floating score for capture
-        showFloatingScore(pts, rect.left + px + 40, rect.top + py - 40);
+        showFloatingScore(pts, px + 40, py - 40);
         
         // Award power-ups through clearer deterministic progress
         awardDeterministicPowerups(size);
@@ -2315,6 +2332,13 @@
   setTimeout(fitBoardToViewport, 0);
   setTimeout(fitBoardToViewport, 120);
   requestAnimationFrame(tick);
+
+  // Register service worker for offline support / PWABuilder detection
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
 })();
 </script>
 </body>
